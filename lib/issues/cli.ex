@@ -39,12 +39,15 @@ defmodule Issues.CLI do
     System.halt(0)
   end
 
-  def process({user, project, _count}) do
+  def process({user, project, count}) do
     Issues.GithubIssues.fetch(user, project)
     |> decode_response
+    |> convert_to_hashdicts
+    |> sort_ascending
+    |> Enum.take(count)
   end
 
-  def decode_response({ :ok, body }), do: convert_to_hashdicts(body)
+  def decode_response({ :ok, body }), do: body
 
   def decode_response({ :error, error }) do
     {_, message} = List.keyfind(error, "message", 0)
@@ -55,5 +58,11 @@ defmodule Issues.CLI do
   def convert_to_hashdicts(list) do
     list
     |> Enum.map(&Enum.into(&1, HashDict.new))
+  end
+
+  def sort_ascending(issue_list) do
+    Enum.sort issue_list, fn i1, i2 ->
+        i1["created_at"] <= i2["created_at"]
+      end
   end
 end
